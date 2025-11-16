@@ -28,6 +28,7 @@ class CampaignBrief:
     campaign_name: str
     brand_name: str
     primary_color: str
+    secondary_color: str
     messaging: CampaignMessaging
     products: List[Dict]
     font_path: Optional[str] = None
@@ -43,6 +44,7 @@ def load_brief(path: Path) -> CampaignBrief:
         campaign_name=data["campaign_name"],
         brand_name=data["brand_name"],
         primary_color=data.get("primary_color", "#111827"),
+        secondary_color=data.get("secondary_color", "#F97316"),
         messaging=CampaignMessaging(
             headline=messaging.get("headline", data["campaign_name"]),
             subheading=messaging.get("subheading"),

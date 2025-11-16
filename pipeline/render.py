@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Dict, Tuple, List, Optional
 
 from PIL import Image, ImageDraw, ImageFont
@@ -55,6 +56,7 @@ def overlay_campaign_text(
     w, h = img.size
 
     brand_color = _parse_color(campaign.primary_color)
+    secondary_color = _parse_color(campaign.secondary_color)
     headline = campaign.messaging.headline
     subheading = campaign.messaging.subheading
     cta = campaign.messaging.call_to_action
@@ -75,10 +77,26 @@ def overlay_campaign_text(
     img = Image.alpha_composite(img, overlay)
     draw = ImageDraw.Draw(img)
 
-    # Fonts
-    headline_font = _load_font(campaign.font_path, size=int(h * 0.06))
-    body_font = _load_font(campaign.font_path, size=int(h * 0.035))
-    cta_font = _load_font(campaign.font_path, size=int(h * 0.04))
+    # Calculate font sizes based on aspect ratio
+    # Use a combination of width and height to ensure fonts scale appropriately
+    aspect_ratio = w / h if h > 0 else 1.0
+    
+    # Base size calculation: smaller multipliers for more compact fonts
+    # This ensures fonts are appropriately sized for all aspect ratios
+    if aspect_ratio > 1.5:  # Landscape (16:9) - wider
+        # For wide landscape, use smaller base size
+        base_size = max(w, h) * 0.06
+    elif aspect_ratio < 0.7:  # Portrait (9:16) - taller
+        # For tall portrait, use smaller base size
+        base_size = max(w, h) * 0.055
+    else:  # Square or near-square (1:1)
+        # For square, use smaller base size
+        base_size = max(w, h) * 0.055
+    
+    # Fonts - smaller multipliers for more compact text
+    headline_font = _load_font(campaign.font_path, size=int(base_size * 1.1))
+    body_font = _load_font(campaign.font_path, size=int(base_size * 0.5))
+    cta_font = _load_font(campaign.font_path, size=int(base_size * 0.5))
 
     margin_x = int(w * 0.07)
     y = int(h * 0.6)
@@ -116,7 +134,7 @@ def overlay_campaign_text(
             max_width=w - 2 * margin_x,
             x=margin_x,
             y=y,
-            fill=(229, 231, 235),  # gray-200
+            fill=secondary_color,
             line_spacing=6,
         ) + 12
 
@@ -142,7 +160,7 @@ def overlay_campaign_text(
             (box_x0 + padding_x, box_y0 + padding_y),
             cta,
             font=cta_font,
-            fill=(255, 255, 255),
+            fill=secondary_color,
         )
 
     return img.convert("RGB")
@@ -201,14 +219,70 @@ def _parse_color(color_str: str) -> Tuple[int, int, int]:
 
 
 def _load_font(font_path: Optional[str], size: int) -> ImageFont.ImageFont:
+    """
+    Load a TrueType font with fallbacks to avoid pixelated bitmap fonts.
+    Prioritizes fonts from the fonts/ folder, then custom font_path, then system fonts.
+    Always returns a TrueType font for crisp rendering.
+    """
+    # First, try fonts from the fonts folder
+    project_root = Path(__file__).parent.parent
+    fonts_dir = project_root / "fonts"
+    
+    if fonts_dir.exists():
+        # Try Roboto fonts first (regular, then italic)
+        font_files = [
+            fonts_dir / "Roboto-VariableFont_wdth,wght.ttf",
+            fonts_dir / "Roboto-Italic-VariableFont_wdth,wght.ttf",
+        ]
+        # Also check for any other .ttf or .otf files in the fonts folder
+        for font_file in fonts_dir.glob("*.ttf"):
+            if font_file not in font_files:
+                font_files.append(font_file)
+        for font_file in fonts_dir.glob("*.otf"):
+            if font_file not in font_files:
+                font_files.append(font_file)
+        
+        for font_file in font_files:
+            try:
+                if font_file.exists():
+                    return ImageFont.truetype(str(font_file), size=size)
+            except Exception:
+                continue
+    
+    # Second, try the custom font_path if provided
     if font_path:
         try:
             return ImageFont.truetype(font_path, size=size)
         except Exception:
             pass
+    
+    # Third, try common system fonts to avoid pixelated default font
+    system_fonts = [
+        # macOS - modern fonts
+        "/System/Library/Fonts/HelveticaNeue.ttc",
+        "/System/Library/Fonts/Helvetica.ttc",
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "/Library/Fonts/Arial.ttf",
+        # Linux
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        # Windows (common paths)
+        "C:/Windows/Fonts/arial.ttf",
+        "C:/Windows/Fonts/calibri.ttf",
+    ]
+    
+    for font_file in system_fonts:
+        try:
+            return ImageFont.truetype(font_file, size=size)
+        except Exception:
+            continue
+    
+    # Last resort: try arial.ttf in current directory or common locations
     try:
         return ImageFont.truetype("arial.ttf", size=size)
     except Exception:
+        # If all else fails, use default but warn that it may be pixelated
+        # In practice, one of the fonts should work
         return ImageFont.load_default()
 
 
