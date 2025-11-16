@@ -5,6 +5,7 @@ from typing import Dict, List, Literal, Optional
 
 from .assets import find_existing_asset_for_product
 from .generator import ImageGenerator
+from .messaging import GeneratedMessaging, MessagingGenerator
 from .render import (
     ASPECT_RATIOS,
     overlay_campaign_text,
@@ -18,8 +19,16 @@ AspectKey = Literal["1:1", "9:16", "16:9"]
 @dataclass
 class CampaignMessaging:
     headline: str
-    subheading: Optional[str] = None
+    # `description` is the canonical field name going forward.
+    # `subheading` is kept as a backwards-compatible alias (property below).
+    description: Optional[str] = None
     call_to_action: Optional[str] = None
+
+    # Backwards-compatible alias so existing code that references
+    # `messaging.subheading` continues to work.
+    @property
+    def subheading(self) -> Optional[str]:
+        return self.description
 
 
 @dataclass
@@ -31,6 +40,8 @@ class CampaignBrief:
     secondary_color: str
     messaging: CampaignMessaging
     products: List[Dict]
+    locale: str = "en-US"
+    demographics: Optional[Dict] = None
     font_path: Optional[str] = None
 
 
@@ -47,11 +58,13 @@ def load_brief(path: Path) -> CampaignBrief:
         secondary_color=data.get("secondary_color", "#F97316"),
         messaging=CampaignMessaging(
             headline=messaging.get("headline", data["campaign_name"]),
-            subheading=messaging.get("subheading"),
+            description=messaging.get("description") or messaging.get("subheading"),
             call_to_action=messaging.get("call_to_action"),
         ),
-        font_path=data.get("font_path"),
         products=data.get("products", []),
+        locale=data.get("locale", "en-US"),
+        demographics=data.get("demographics") or {},
+        font_path=data.get("font_path"),
     )
 
 
@@ -71,10 +84,13 @@ class CreativePipeline:
         input_assets_dir: Path,
         output_root: Path,
         use_mock_generator: bool = True,
+        messaging_generator: Optional[MessagingGenerator] = None,
     ) -> None:
         self.input_assets_dir = input_assets_dir
         self.output_root = output_root
         self.generator = ImageGenerator(use_mock=use_mock_generator)
+        # LLM-backed messaging generator (defaults to local mock implementation).
+        self.messaging_generator = messaging_generator or MessagingGenerator()
 
     def run(self, brief_path: Path) -> None:
         brief = load_brief(brief_path)
@@ -84,6 +100,9 @@ class CreativePipeline:
         for product in brief.products:
             product_id = str(product.get("id") or product.get("sku") or product.get("name"))
             product_slug = _slugify(product_id)
+
+            # Generate messaging once per product; reused across all aspect ratios.
+            product_messaging = self._build_messaging_for_product(brief, product)
 
             for aspect_key, target_ratio in ASPECT_RATIOS.items():
                 out_dir = campaign_root / product_slug / aspect_key.replace(":", "x")
@@ -107,11 +126,40 @@ class CreativePipeline:
                     resized,
                     campaign=brief,
                     product=product,
+                    messaging=product_messaging,
                 )
 
                 filename = f"{brief.campaign_id}_{product_slug}_{aspect_key.replace(':', 'x')}.png"
                 output_path = out_dir / filename
                 rendered.save(output_path, format="PNG")
+
+    def _build_messaging_for_product(
+        self,
+        brief: CampaignBrief,
+        product: Dict,
+    ) -> CampaignMessaging:
+        """
+        Use the LLM adapter to generate product-level messaging for the campaign.
+
+        This keeps the pipeline text-generation logic centralized and makes it
+        easy to swap in a real LLM via `MessagingGenerator`.
+        """
+        generated: GeneratedMessaging = self.messaging_generator.generate(
+            campaign_name=brief.campaign_name,
+            brand_name=brief.brand_name,
+            product=product,
+            locale=brief.locale,
+            demographics=brief.demographics or {},
+            existing_headline=brief.messaging.headline,
+            existing_description=brief.messaging.description,
+            existing_cta=brief.messaging.call_to_action,
+        )
+
+        return CampaignMessaging(
+            headline=generated.headline or brief.messaging.headline,
+            description=generated.description or brief.messaging.description,
+            call_to_action=generated.call_to_action or brief.messaging.call_to_action,
+        )
 
     @staticmethod
     def _build_prompt(

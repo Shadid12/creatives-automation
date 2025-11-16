@@ -47,6 +47,7 @@ def overlay_campaign_text(
     img: Image.Image,
     campaign,
     product: dict,
+    messaging,
 ) -> Image.Image:
     """
     Render English messaging onto the image, using brand color and
@@ -57,9 +58,13 @@ def overlay_campaign_text(
 
     brand_color = _parse_color(campaign.primary_color)
     secondary_color = _parse_color(campaign.secondary_color)
-    headline = campaign.messaging.headline
-    subheading = campaign.messaging.subheading
-    cta = campaign.messaging.call_to_action
+
+    # Always use the LLM-generated messaging that is passed in.
+    headline = messaging.headline
+    subheading = getattr(messaging, "description", None) or getattr(
+        messaging, "subheading", None
+    )
+    cta = messaging.call_to_action
     product_name = product.get("name")
 
     overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
