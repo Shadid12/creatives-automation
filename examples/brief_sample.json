@@ -1,0 +1,30 @@
+{
+  "campaign_id": "fall_launch_2025",
+  "campaign_name": "Fall Launch 2025",
+  "brand_name": "Northwind Athletics",
+  "primary_color": "#F97316",
+  "font_path": "",
+  "messaging": {
+    "headline": "Move Faster This Fall",
+    "subheading": "Lightweight performance gear designed for cooler days.",
+    "call_to_action": "Shop the Fall Drop"
+  },
+  "products": [
+    {
+      "id": "trail-runner-shoe",
+      "name": "Trail Runner Shoe",
+      "description": "All-weather trail running shoe with reinforced grip and breathable upper.",
+      "tags": ["running", "trail", "outdoor"],
+      "asset_path": "trail-runner-shoe.png"
+    },
+    {
+      "id": "thermal-joggers",
+      "name": "Thermal Joggers",
+      "description": "Slim-fit joggers with brushed interior lining for warmth without bulk.",
+      "tags": ["joggers", "warm", "training"],
+      "asset_path": "thermal-jogger.png"
+    }
+  ]
+}
+
+

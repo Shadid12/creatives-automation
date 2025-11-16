@@ -1,9 +1,7 @@
 from dataclasses import dataclass
-from typing import Dict, Tuple
+from typing import Dict, Tuple, List, Optional
 
 from PIL import Image, ImageDraw, ImageFont
-
-from .core import CampaignBrief
 
 
 AspectRatio = Tuple[int, int]
@@ -17,7 +15,7 @@ ASPECT_RATIOS: Dict[str, AspectRatio] = {
 
 @dataclass
 class BrandSettings:
-    primary_color: tuple[int, int, int]
+    primary_color: Tuple[int, int, int]
 
 
 def resize_to_aspect_ratio(img: Image.Image, ratio: AspectRatio) -> Image.Image:
@@ -46,7 +44,7 @@ def resize_to_aspect_ratio(img: Image.Image, ratio: AspectRatio) -> Image.Image:
 
 def overlay_campaign_text(
     img: Image.Image,
-    campaign: CampaignBrief,
+    campaign,
     product: dict,
 ) -> Image.Image:
     """
@@ -157,7 +155,7 @@ def _draw_text_block(
     max_width: int,
     x: int,
     y: int,
-    fill: tuple[int, int, int],
+    fill: Tuple[int, int, int],
     line_spacing: int,
 ) -> int:
     lines = _wrap_text(draw, text, font, max_width)
@@ -169,9 +167,9 @@ def _draw_text_block(
 
 def _wrap_text(
     draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont, max_width: int
-) -> list[str]:
+) -> List[str]:
     words = text.split()
-    lines: list[str] = []
+    lines: List[str] = []
     current = ""
     for word in words:
         test = f"{current} {word}".strip()
@@ -185,7 +183,7 @@ def _wrap_text(
     return lines
 
 
-def _parse_color(color_str: str) -> tuple[int, int, int]:
+def _parse_color(color_str: str) -> Tuple[int, int, int]:
     """
     Parse hex color strings like '#FF0000' or 'FF0000' into RGB tuple.
     Fallbacks to a safe default if parsing fails.
@@ -202,7 +200,7 @@ def _parse_color(color_str: str) -> tuple[int, int, int]:
     return (59, 130, 246)  # blue-500
 
 
-def _load_font(font_path: str | None, size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+def _load_font(font_path: Optional[str], size: int) -> ImageFont.ImageFont:
     if font_path:
         try:
             return ImageFont.truetype(font_path, size=size)

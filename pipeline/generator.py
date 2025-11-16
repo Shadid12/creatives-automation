@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import List
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -70,16 +70,18 @@ class ImageGenerator:
         return img
 
 
-def _load_default_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+def _load_default_font(size: int) -> ImageFont.ImageFont:
     try:
         return ImageFont.truetype("arial.ttf", size=size)
     except Exception:
         return ImageFont.load_default()
 
 
-def _wrap_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont, max_width: int) -> list[str]:
+def _wrap_text(
+    draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont, max_width: int
+) -> List[str]:
     words = text.split()
-    lines: list[str] = []
+    lines: List[str] = []
     current = ""
     for word in words:
         test = f"{current} {word}".strip()
