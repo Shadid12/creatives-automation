@@ -83,10 +83,10 @@ class MessagingGenerator:
             else (existing_headline or campaign_name)
         )
 
-        # Let the model generate the description as a punchy sales pitch that
-        # leverages the provided demographics and locale. We rely primarily on
-        # the model's `description` field here.
-        description = str(payload.get("description") or "").strip()
+        # Let the model generate the subheading as a punchy sales pitch that
+        # leverages the provided demographics and locale. We only accept the
+        # explicit `subheading` field from the model here.
+        description = str(payload.get("subheading") or "").strip()
 
         # CTA can still fall back to existing messaging if the model omits it.
         cta = (
@@ -116,7 +116,7 @@ class MessagingGenerator:
 
         The LLM is instructed to respond *only* with a JSON object containing:
         - headline
-        - description
+        - subheading
         - call_to_action
         """
         product_name = product.get("name") or product.get("id") or ""
@@ -139,7 +139,7 @@ class MessagingGenerator:
             f"- Write copy in locale: {locale}.\n"
             "- Use natural, fluent language for that locale. You should speak in a language that is appropriate for the target demographics.\n"
             "- Keep the headline punchy (max ~8 words) and benefit-driven.\n"
-            "- Make the description a short, punchy sales pitch that clearly targets the given demographics and highlights product benefits.\n It should be 1-2 sentences long.\n"
+            "- Make the subheading a short, punchy sales pitch that clearly targets the given demographics.\n It should be no more than 12 words long.\n"
             "- The call_to_action should be a short imperative phrase (e.g. 'Shop now').\n\n"
             "Context:\n"
             f'- Brand: "{brand_name}"\n'
@@ -151,7 +151,7 @@ class MessagingGenerator:
             "Return ONLY a valid JSON object with this exact shape and no surrounding commentary:\n"
             '{\n'
             '  "headline": "string",\n'
-            '  "description": "string",\n'
+            '  "subheading": "string",\n'
             '  "call_to_action": "string"\n'
             "}\n"
         )

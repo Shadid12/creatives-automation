@@ -61,11 +61,15 @@ def overlay_campaign_text(
 
     # Always use the LLM-generated messaging that is passed in.
     headline = messaging.headline
-    subheading = getattr(messaging, "description", None) or getattr(
-        messaging, "subheading", None
-    )
+    subheading = messaging.subheading
+
+    print(f"Headline: {headline}")
+    print(f"Subheading: {subheading}")
+
     cta = messaging.call_to_action
     product_name = product.get("name")
+
+    print(f"CTA: {cta}")
 
     overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
@@ -104,20 +108,12 @@ def overlay_campaign_text(
     cta_font = _load_font(campaign.font_path, size=int(base_size * 0.5))
 
     margin_x = int(w * 0.07)
-    y = int(h * 0.6)
-
-    # Product name (small label)
-    if product_name:
-        y = _draw_text_block(
-            draw,
-            text=str(product_name),
-            font=body_font,
-            max_width=w - 2 * margin_x,
-            x=margin_x,
-            y=y,
-            fill=(209, 213, 219),  # gray-300
-            line_spacing=6,
-        ) + 8
+    # Start text block slightly higher for 16:9 to avoid clipping near the bottom,
+    # keep a bit lower for other aspect ratios.
+    if aspect_ratio > 1.5:  # 16:9 landscape
+        y = int(h * 0.5)
+    else:
+        y = int(h * 0.55)
 
     # Headline in brand color
     y = _draw_text_block(

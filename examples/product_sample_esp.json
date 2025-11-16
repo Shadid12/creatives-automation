@@ -1,0 +1,37 @@
+{
+  "campaign_id": "fall_launch_es_2025",
+  "campaign_name": "Fall Launch 2025",
+  "brand_name": "Northwind Athletics",
+  "primary_color": "#F97316",
+  "secondary_color": "#FFFFFF",
+  "font_path": "",
+  "messaging": {
+    "headline": "Move Faster This Fall",
+    "subheading": "Lightweight performance gear designed for cooler days.",
+    "call_to_action": "Shop the Fall Drop"
+  },
+  "locale": "es-MX",
+  "demographics": {
+    "gender": "Female",
+    "age": "25-34",
+    "location": "United States - California - Southern California - Los Angeles - San Diego - San Francisco"
+  },
+  "products": [
+    {
+      "id": "trail-runner-shoe",
+      "name": "Trail Runner Shoe",
+      "description": "Engineered for aggressive trail conditions, these performance running shoes combine durability with adaptive comfort. The multi-directional lug pattern on the outsole provides 4mm deep tread for optimal grip on loose gravel, mud, and wet rock surfaces. The upper construction features a breathable engineered mesh with TPU overlays at high-wear zones for structural support and protection against trail debris. A gusseted tongue design prevents dirt and pebble intrusion, while the moisture-wicking lining manages perspiration in variable weather conditions. The midsole utilizes responsive EVA foam for shock absorption across uneven terrain, complemented by a rock plate for underfoot protection. Reinforced toe cap adds durability for technical descents. Suitable for distances from 5K trail races to ultra-endurance events in mixed weather conditions.",
+      "tags": ["running", "trail", "outdoor"],
+      "asset_path": "trail-runner-shoe.png"
+    },
+    {
+      "id": "thermal-joggers",
+      "name": "Thermal Joggers",
+      "description": "Technical cold-weather training pants featuring a dual-layer construction for optimal thermal regulation. The interior is lined with a soft-brushed fleece material that traps body heat while maintaining breathability to prevent overheating during high-intensity workouts. The outer shell utilizes a durable polyester-spandex blend (typically 88% polyester, 12% spandex) for four-way stretch and shape retention. Slim-fit tapered leg design reduces bulk and allows for full range of motion during dynamic movements. Features include an elasticated waistband with internal drawcord for secure fit adjustment, zippered side pockets for secure storage, and elasticated ankle cuffs to seal in warmth. Moisture-wicking properties throughout both layers manage sweat during training. Ideal temperature range: 0-15°C (32-59°F). Suitable for outdoor running, gym training, and active recovery in cold conditions.",
+      "tags": ["joggers", "warm", "training"],
+      "asset_path": "thermal-jogger.png"
+    }
+  ]
+}
+
+

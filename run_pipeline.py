@@ -62,8 +62,8 @@ def main() -> None:
     api_key = os.environ.get("OPENAI_API_KEY")
     if api_key:
         llm = ChatOpenAI(
-            model="gpt-5-nano-2025-08-07",
-            temperature=0.7,
+            model="gpt-5-mini-2025-08-07",
+            temperature=0.9,
             api_key=api_key,
         )
     else:
