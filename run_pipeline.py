@@ -31,16 +31,6 @@ def parse_args() -> argparse.Namespace:
         default=Path("outputs"),
         help="Root folder where generated creatives will be stored.",
     )
-    parser.add_argument(
-        "--use-mock-generator",
-        action="store_true",
-        help="Force using the local mock GenAI image generator (default).",
-    )
-    parser.add_argument(
-        "--use-real-generator",
-        action="store_true",
-        help="Placeholder flag for wiring a real GenAI generator in the future.",
-    )
     return parser.parse_args()
 
 
@@ -50,11 +40,6 @@ def main() -> None:
     load_dotenv()
 
     args = parse_args()
-
-    if args.use_real_generator and args.use_mock_generator:
-        raise SystemExit("Choose either --use-real-generator or --use-mock-generator, not both.")
-
-    use_mock = not args.use_real_generator
 
     # Configure messaging LLM (OpenAI via LangChain) based on environment.
     # If OPENAI_API_KEY is defined, we use a real LLM; otherwise we fall back
@@ -66,10 +51,14 @@ def main() -> None:
             temperature=0.9,
             api_key=api_key,
         )
+        # When an API key is present, use the real image generator as well.
+        use_mock = False
     else:
         # Explicitly pass None to enable the local mock behavior inside
-        # MessagingGenerator when no real LLM is configured.
+        # MessagingGenerator when no real LLM is configured, and use the
+        # local mock image generator.
         llm = None
+        use_mock = True
 
     messaging_generator = MessagingGenerator(llm=llm)
 
