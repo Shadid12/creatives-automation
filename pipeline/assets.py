@@ -24,7 +24,10 @@ def find_existing_asset_for_product(
     if explicit_path:
         candidate = assets_dir / explicit_path
         if candidate.exists():
+            print(f"✓ Found explicit asset_path: {explicit_path}")
             return candidate
+        else:
+            print(f"⚠ asset_path specified but file not found: {explicit_path}")
 
     product_id = str(product.get("id") or product.get("sku") or product.get("name") or "")
     if not product_id:

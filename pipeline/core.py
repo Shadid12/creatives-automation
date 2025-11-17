@@ -94,32 +94,61 @@ class CreativePipeline:
 
     def run(self, brief_path: Path) -> None:
         brief = load_brief(brief_path)
+
+        # Also load the raw JSON so we can persist any newly generated asset paths.
+        with brief_path.open("r", encoding="utf-8") as f:
+            brief_data = json.load(f)
+
         campaign_root = self.output_root / brief.campaign_id
         campaign_root.mkdir(parents=True, exist_ok=True)
 
-        for product in brief.products:
+        products_data = brief_data.get("products", [])
+        brief_updated = False
+
+        for idx, product in enumerate(brief.products):
             product_id = str(product.get("id") or product.get("sku") or product.get("name"))
             product_slug = _slugify(product_id)
 
             # Generate messaging once per product; reused across all aspect ratios.
             product_messaging = self._build_messaging_for_product(brief, product)
 
+            # 1) Re-use asset if available. If not, generate a new image (via Replicate
+            # when configured) and persist it under input-assets, then update the brief.
+            asset_path = find_existing_asset_for_product(
+                product=product,
+                campaign_id=brief.campaign_id,
+                assets_dir=self.input_assets_dir,
+            )
+
+            if asset_path is None:
+                # Product has no asset_path field - generate new image
+                print(f"🎨 Generating image for product '{product_id}' (no asset_path found)")
+                prompt = self._build_image_prompt_for_product(brief, product)
+                base_img = self.generator.generate_image(prompt=prompt)
+
+                # Persist the generated base asset so it can be reused across runs.
+                self.input_assets_dir.mkdir(parents=True, exist_ok=True)
+                asset_filename = f"{product_slug}.png"
+                asset_full_path = self.input_assets_dir / asset_filename
+                base_img.save(asset_full_path, format="PNG")
+
+                # Update in-memory product dict
+                product["asset_path"] = asset_filename
+                # Update the raw JSON data, if a corresponding entry exists
+                if 0 <= idx < len(products_data):
+                    products_data[idx]["asset_path"] = asset_filename
+                    brief_data["products"] = products_data
+                    brief_updated = True
+
+                asset_path = asset_full_path
+            else:
+                # Product has asset_path field - use existing image
+                print(f"📁 Loading existing asset for product '{product_id}' from: {asset_path.name}")
+                base_img = self.generator.load_existing_image(asset_path)
+
             for aspect_key, target_ratio in ASPECT_RATIOS.items():
                 out_dir = campaign_root / product_slug / aspect_key.replace(":", "x")
                 out_dir.mkdir(parents=True, exist_ok=True)
-
-                # 1) re-use asset if available
-                asset_path = find_existing_asset_for_product(
-                    product=product,
-                    campaign_id=brief.campaign_id,
-                    assets_dir=self.input_assets_dir,
-                )
-
-                if asset_path is not None:
-                    base_img = self.generator.load_existing_image(asset_path)
-                else:
-                    prompt = self._build_prompt(brief, product, aspect_key)
-                    base_img = self.generator.generate_image(prompt=prompt)
 
                 resized = resize_to_aspect_ratio(base_img, target_ratio)
                 rendered = overlay_campaign_text(
@@ -132,6 +161,11 @@ class CreativePipeline:
                 filename = f"{brief.campaign_id}_{product_slug}_{aspect_key.replace(':', 'x')}.png"
                 output_path = out_dir / filename
                 rendered.save(output_path, format="PNG")
+
+        # Persist any new asset paths back to the brief JSON file.
+        if brief_updated:
+            with brief_path.open("w", encoding="utf-8") as f:
+                json.dump(brief_data, f, indent=2, ensure_ascii=False)
 
     def _build_messaging_for_product(
         self,
@@ -162,20 +196,42 @@ class CreativePipeline:
         )
 
     @staticmethod
-    def _build_prompt(
-        brief: CampaignBrief, product: Dict, aspect_key: AspectKey
+    def _build_image_prompt_for_product(
+        brief: CampaignBrief,
+        product: Dict,
     ) -> str:
-        description = product.get("description") or product.get("name") or ""
+        """
+        Build an image-generation prompt that uses product name, description,
+        and campaign demographics to create an advertising image.
+        """
+        name = product.get("name", "a product")
+        description = product.get("description") or ""
         tags = product.get("tags") or []
-        tag_str = ", ".join(tags)
-        return (
-            f"Product photo of {product.get('name', 'a product')} "
-            f"for brand {brief.brand_name}. "
-            f"Style: clean, modern advertising. "
-            f"Aspect ratio {aspect_key}. "
-            f"Details: {description}. "
-            f"Keywords: {tag_str}."
+        tag_str = ", ".join(tags) if tags else ""
+
+        demographics = brief.demographics or {}
+        if demographics:
+            demo_parts = [f"{k}: {v}" for k, v in demographics.items()]
+            demo_str = "; ".join(demo_parts)
+        else:
+            demo_str = "General active lifestyle audience"
+
+        prompt = (
+            f"High-quality advertising product photo for the brand {brief.brand_name}. "
+            f"Product name: {name}. "
+            f"Product description: {description}. "
+            f"Target demographic: {demo_str}. "
         )
+
+        if tag_str:
+            prompt += f"Keywords and visual cues: {tag_str}. "
+
+        prompt += (
+            "Style: clean, modern commercial photography, well-lit, realistic, "
+            "studio-quality composition suitable for digital marketing creatives."
+        )
+
+        return prompt
 
 
 def _slugify(text: str) -> str:
