@@ -13,8 +13,8 @@ A **local, deterministic creative automation pipeline** for generating product m
 ## Requirements
 
 - Python 3.10 or higher
-- (Optional) OpenAI API key for LLM-based messaging generation
-- (Optional) Replicate API key for AI image generation
+- OpenAI API key for LLM-based messaging generation
+- Replicate API key for AI image generation
 
 ## Installation
 
